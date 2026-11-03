@@ -1048,20 +1048,68 @@
       content.append(title, desc, meta); card.append(imageWrap, content); card.addEventListener('click', () => openPhotoModal(photo)); return card;
     }
 
-    function openPhotoModal(photo) {
-      $('modal-title').textContent = photo.photo_title || '';
-      $('modal-category').textContent = photo.photo_category || '';
-      const isVideo = (photo.media_type || 'image') === 'video';
-      $('modal-image').classList.toggle('hidden', isVideo); $('modal-video').classList.toggle('hidden', !isVideo);
-      if (isVideo) { $('modal-video').src = photo.photo_url || ''; $('modal-video').load(); $('modal-image').removeAttribute('src'); } else { $('modal-image').src = photo.photo_url || ''; $('modal-image').alt = photo.photo_title || ''; $('modal-video').pause(); $('modal-video').removeAttribute('src'); }
-      $('modal-description').textContent = photo.photo_description || 'No description available';
-      $('modal-location').textContent = photo.photo_location ? '📍 ' + photo.photo_location : '';
-      $('modal-date').textContent = photo.created_at ? 'Added: ' + new Date(photo.created_at).toLocaleDateString() : '';
-      currentPhotoForDeletion = photo;
-      $('photo-modal').classList.remove('hidden'); document.body.style.overflow = 'hidden';
-      $('admin-delete-section').style.display = currentAdminUser ? 'flex' : 'none';
-      $('delete-photo-btn').textContent = (photo.media_type === 'video' ? 'Delete Video' : 'Delete Photo'); $('delete-photo-btn').dataset.confirm = 'no';
+    
+async function openPhotoModal(photo) {
+  $('modal-title').textContent = photo.photo_title || '';
+  $('modal-category').textContent = photo.photo_category || '';
+
+  const isVideo = (photo.media_type || 'image') === 'video';
+
+  $('modal-image').classList.toggle('hidden', isVideo);
+  $('modal-video').classList.toggle('hidden', !isVideo);
+
+  if (isVideo) {
+    $('modal-video').src = photo.photo_url || '';
+    $('modal-video').load();
+    $('modal-image').removeAttribute('src');
+  } else {
+    $('modal-image').src = photo.photo_url || '';
+    $('modal-image').alt = photo.photo_title || '';
+    $('modal-video').pause();
+    $('modal-video').removeAttribute('src');
+  }
+
+  $('modal-description').textContent =
+    photo.photo_description || 'No description available';
+
+  $('modal-location').textContent =
+    photo.photo_location ? '📍 ' + photo.photo_location : '';
+
+  $('modal-date').textContent =
+    photo.created_at
+      ? 'Added: ' + new Date(photo.created_at).toLocaleDateString()
+      : '';
+
+  currentPhotoForDeletion = photo;
+
+  // Refresh the Supabase authentication session
+  if (supabaseClient) {
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (!error) {
+      currentAdminUser = data?.session?.user || null;
     }
+  }
+
+  // Show the delete button only to an authenticated admin
+  const deleteSection = $('admin-delete-section');
+  const deleteButton = $('delete-photo-btn');
+
+  if (currentAdminUser) {
+    deleteSection.classList.remove('hidden');
+    deleteSection.style.display = 'flex';
+    deleteButton.style.display = 'inline-flex';
+    deleteButton.textContent =
+      isVideo ? 'Delete Video' : 'Delete Photo';
+    deleteButton.dataset.confirm = 'no';
+  } else {
+    deleteSection.style.display = 'none';
+  }
+
+  $('photo-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+   
     function closePhotoModal() { $('photo-modal').classList.add('hidden'); document.body.style.overflow = ''; if ($('modal-video')) { $('modal-video').pause(); $('modal-video').removeAttribute('src'); } currentPhotoForDeletion = null; }
 
     async function signInAdmin(event) {
